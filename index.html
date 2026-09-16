@@ -957,7 +957,7 @@ function renderMatrix() {
     for (const xv of x.values) {
       const p = { ...live, [x.key]: xv, [y.key]: yv };
       const isLive = String(live[x.key]) === String(xv) && String(live[y.key]) === String(yv);
-      body.push(`<td><div class="cell" role="button" tabindex="0" data-live="${isLive}" data-x="${String(xv)}" data-y="${String(yv)}" title="Apply ${x.key}=${String(xv)}, ${y.key}=${String(yv)}">${RENDER[c.id](p)}</div></td>`);
+      body.push(`<td><div class="cell" role="button" tabindex="${isLive ? 0 : -1}" data-live="${isLive}" data-x="${String(xv)}" data-y="${String(yv)}" title="Apply ${x.key}=${String(xv)}, ${y.key}=${String(yv)}">${RENDER[c.id](p)}</div></td>`);
     }
     body.push("</tr>");
   }
@@ -967,14 +967,40 @@ function renderMatrix() {
 
   const cast = (axis, raw) => (typeof axis.values[0] === "boolean" ? raw === "true" : raw);
   for (const cell of $("matrix").querySelectorAll(".cell")) {
-    const apply = () => {
+    const apply = (keepFocus) => {
       S.props[c.id][x.key] = cast(x, cell.dataset.x);
       S.props[c.id][y.key] = cast(y, cell.dataset.y);
       renderStage(); renderMatrix(); renderInspector();
+      if (keepFocus) focusCell(cell.dataset.x, cell.dataset.y);
     };
-    cell.addEventListener("click", apply);
-    cell.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); apply(); } });
+    cell.addEventListener("click", () => apply(false));
+    cell.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); apply(true); }
+    });
   }
+}
+
+function focusCell(xv, yv) {
+  const cell = $("matrix").querySelector(`.cell[data-x="${xv}"][data-y="${yv}"]`);
+  if (cell) cell.focus();
+}
+
+function moveInMatrix(from, key) {
+  const cells = [...$("matrix").querySelectorAll(".cell")];
+  const cols = current().axes.x.values.length;
+  const at = cells.indexOf(from);
+  if (at < 0) return false;
+  const row = Math.floor(at / cols);
+  const col = at % cols;
+  const rows = Math.ceil(cells.length / cols);
+  const step = { ArrowRight: [0, 1], ArrowLeft: [0, -1], ArrowDown: [1, 0], ArrowUp: [-1, 0] }[key];
+  if (!step) return false;
+  const nr = row + step[0];
+  const nc = col + step[1];
+  if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) return true;
+  const next = cells[nr * cols + nc];
+  if (next) { next.tabIndex = 0; next.focus(); }
+  return true;
 }
 
 function spark(series) {
@@ -1149,6 +1175,10 @@ document.addEventListener("keydown", (e) => {
   const typing = e.target.tagName === "INPUT";
   if (e.key === "/" && !typing) { e.preventDefault(); $("search").focus(); return; }
   if (typing && e.key === "Escape") { e.target.blur(); return; }
+  const inMatrix = e.target.closest && e.target.closest(".cell");
+  if (inMatrix && e.key.startsWith("Arrow")) {
+    if (moveInMatrix(inMatrix, e.key)) { e.preventDefault(); return; }
+  }
   if (typing || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
   e.preventDefault();
   const ids = [...$("railList").querySelectorAll(".item")].map((b) => b.dataset.id);
