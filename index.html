@@ -306,6 +306,18 @@ button, input, select { font: inherit; color: inherit; }
   box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 32px -18px rgba(0,0,0,.35);
 }
 
+.notice {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--crit-wash);
+  color: var(--crit);
+  font-size: 12px;
+}
+.notice[data-tone="warn"] { background: var(--warn-wash); color: var(--warn); }
+.notice b { font-weight: 650; }
+.notice .swap { margin-left: auto; }
+
 .matrix-wrap { border-top: 1px solid var(--line); background: var(--surface); }
 .matrix-head { display: flex; align-items: center; gap: 10px; padding: 9px 14px 0; }
 .matrix-scroll { overflow-x: auto; padding: 10px 14px 16px; }
@@ -624,6 +636,7 @@ button, input, select { font: inherit; color: inherit; }
     </div>
 
     <div class="bench-body">
+      <div class="notice" id="notice" hidden></div>
       <div class="stage-wrap" id="stageWrap" data-surface="light">
         <div class="stage" id="stage"></div>
       </div>
@@ -688,6 +701,7 @@ const LIB = [
   {
     id: "segmented", name: "Segmented control", group: "Actions", status: "review", version: "1.1.0-rc.2",
     instances: 212, adoption: 64, drift: 5, owner: "Dana Moreau", updated: "5 hours ago",
+    blocker: "Four items overflow below 360px — release is held until the wrap rule lands.",
     products: ["Console", "Admin", "Docs"],
     series: [12, 18, 24, 29, 33, 38, 44, 48, 53, 57, 61, 64],
     tokens: { radius: 7, padY: 9, padX: 15, font: 13, weight: 550 },
@@ -794,6 +808,7 @@ const LIB = [
   {
     id: "meter", name: "Usage meter", group: "Data display", status: "deprecated", version: "1.0.4",
     instances: 41, adoption: 18, drift: 14, owner: "Ilse Brandt", updated: "2 months ago",
+    replacedBy: { name: "Progress", since: "2.0.0" },
     products: ["Billing"],
     series: [52, 49, 45, 41, 38, 34, 31, 28, 25, 22, 20, 18],
     tokens: { radius: 999, padY: 9, padX: 15, font: 13, weight: 600 },
@@ -942,7 +957,28 @@ function renderStage() {
   st.dataset.tone = STATUS_TONE[c.status];
   $("benchVer").textContent = "v" + c.version;
   $("stage").innerHTML = RENDER[c.id](S.props[c.id]);
+  renderNotice(c);
   $("footPath").textContent = `core / ${c.group.toLowerCase().replace(" ", "-")} / ${c.id}`;
+}
+
+function renderNotice(c) {
+  const el = $("notice");
+  if (c.replacedBy) {
+    el.hidden = false;
+    el.dataset.tone = "crit";
+    el.innerHTML = `<b>Deprecated since v${c.replacedBy.since}.</b>` +
+      `<span>Use ${c.replacedBy.name} instead — ${c.instances} instances still to migrate.</span>` +
+      `<span class="chip swap" data-tone="crit">Do not use in new work</span>`;
+    return;
+  }
+  if (c.blocker) {
+    el.hidden = false;
+    el.dataset.tone = "warn";
+    el.innerHTML = `<b>Release blocked.</b><span>${E(c.blocker)}</span>` +
+      `<span class="chip swap" data-tone="warn">Owner: ${E(c.owner)}</span>`;
+    return;
+  }
+  el.hidden = true;
 }
 
 function renderMatrix() {
