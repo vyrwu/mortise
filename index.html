@@ -1109,11 +1109,23 @@ function renderHealth() {
 
 function select(id) {
   S.sel = id;
+  savePrefs({ component: id });
   renderRail(); renderStage(); renderMatrix(); renderInspector();
+}
+
+const PREFS = "mortise.prefs";
+
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS)) || {}; } catch (err) { return {}; }
+}
+
+function savePrefs(patch) {
+  try { localStorage.setItem(PREFS, JSON.stringify({ ...loadPrefs(), ...patch })); } catch (err) { /* private mode */ }
 }
 
 function setSurface(mode) {
   S.surface = mode;
+  savePrefs({ surface: mode });
   $("stageWrap").dataset.surface = mode;
   $("matrixScroll").dataset.surface = mode;
   $("surfLight").setAttribute("aria-pressed", String(mode === "light"));
@@ -1128,8 +1140,10 @@ $("search").addEventListener("input", (e) => { S.filter = e.target.value; render
 $("themeBtn").addEventListener("click", () => {
   const dark = document.documentElement.dataset.theme === "dark" ||
     (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.dataset.theme = dark ? "light" : "dark";
-  $("themeBtn").setAttribute("aria-pressed", String(!dark));
+  const next = dark ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  $("themeBtn").setAttribute("aria-pressed", String(next === "dark"));
+  savePrefs({ theme: next });
 });
 
 $("publishBtn").addEventListener("click", () => {
@@ -1161,9 +1175,15 @@ document.addEventListener("keydown", (e) => {
   if (next) select(next);
 });
 
+const saved = loadPrefs();
+if (saved.theme) {
+  document.documentElement.dataset.theme = saved.theme;
+  $("themeBtn").setAttribute("aria-pressed", String(saved.theme === "dark"));
+}
+
 renderHealth();
-select("button");
-setSurface("light");
+select(LIB.some((c) => c.id === saved.component) ? saved.component : "button");
+setSurface(saved.surface === "dark" ? "dark" : "light");
 </script>
 </body>
 </html>
