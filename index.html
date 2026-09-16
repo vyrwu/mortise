@@ -605,6 +605,7 @@ button, input, select { font: inherit; color: inherit; }
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <span class="chip" data-tone="good" id="hStable"></span>
         <span class="chip" data-tone="warn" id="hDrift"></span>
+        <span class="chip" id="hCoverage"></span>
       </div>
     </div>
   </nav>
@@ -1099,8 +1100,11 @@ function renderInspector() {
 function renderHealth() {
   const stable = LIB.filter((c) => c.status === "stable").length;
   const drift = LIB.reduce((n, c) => n + c.drift, 0);
+  const instances = LIB.reduce((n, c) => n + c.instances, 0);
+  const covered = instances - drift;
   $("hStable").textContent = `${stable} of ${LIB.length} stable`;
   $("hDrift").textContent = `${drift} off-token instances`;
+  $("hCoverage").textContent = `${Math.round((covered / instances) * 100)}% of ${instances.toLocaleString("en-US")} instances on token`;
 }
 
 function select(id) {
