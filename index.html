@@ -1,0 +1,1165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mortise — component workbench</title>
+<style>
+:root {
+  --paper:      #F1F3F0;
+  --surface:    #FAFBF9;
+  --panel:      #E7EBE6;
+  --line:       #D4DAD2;
+  --line-soft:  #E1E6DF;
+  --ink:        #151A17;
+  --ink-2:      #4C564F;
+  --ink-3:      #7B867E;
+  --accent:     #0F766A;
+  --accent-ink: #FFFFFF;
+  --accent-wash:#DCEAE6;
+  --brass:      #8E6C21;
+  --brass-wash: #F0E7D0;
+  --good:       #2E7D52;
+  --warn:       #A76B12;
+  --crit:       #B3382F;
+  --good-wash:  #DFEDE4;
+  --warn-wash:  #F5E9D2;
+  --crit-wash:  #F5DFDC;
+
+  --font-display: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, "Cascadia Mono", Consolas, monospace;
+
+  --rail-w: 252px;
+  --insp-w: 312px;
+  --head-h: 52px;
+  --foot-h: 28px;
+  --r: 5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:      #0D1211;
+    --surface:    #131917;
+    --panel:      #19201D;
+    --line:       #28312D;
+    --line-soft:  #1F2724;
+    --ink:        #E7ECE8;
+    --ink-2:      #A2AEA7;
+    --ink-3:      #6D7A73;
+    --accent:     #3FBFA8;
+    --accent-ink: #06201C;
+    --accent-wash:#123029;
+    --brass:      #CFA351;
+    --brass-wash: #2C2415;
+    --good:       #4FB380;
+    --warn:       #D9A441;
+    --crit:       #E0685C;
+    --good-wash:  #12291E;
+    --warn-wash:  #2B2213;
+    --crit-wash:  #2E1917;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:      #0D1211;
+  --surface:    #131917;
+  --panel:      #19201D;
+  --line:       #28312D;
+  --line-soft:  #1F2724;
+  --ink:        #E7ECE8;
+  --ink-2:      #A2AEA7;
+  --ink-3:      #6D7A73;
+  --accent:     #3FBFA8;
+  --accent-ink: #06201C;
+  --accent-wash:#123029;
+  --brass:      #CFA351;
+  --brass-wash: #2C2415;
+  --good:       #4FB380;
+  --warn:       #D9A441;
+  --crit:       #E0685C;
+  --good-wash:  #12291E;
+  --warn-wash:  #2B2213;
+  --crit-wash:  #2E1917;
+}
+
+:root[data-theme="light"] {
+  --paper:      #F1F3F0;
+  --surface:    #FAFBF9;
+  --panel:      #E7EBE6;
+  --line:       #D4DAD2;
+  --line-soft:  #E1E6DF;
+  --ink:        #151A17;
+  --ink-2:      #4C564F;
+  --ink-3:      #7B867E;
+  --accent:     #0F766A;
+  --accent-ink: #FFFFFF;
+  --accent-wash:#DCEAE6;
+  --brass:      #8E6C21;
+  --brass-wash: #F0E7D0;
+  --good:       #2E7D52;
+  --warn:       #A76B12;
+  --crit:       #B3382F;
+  --good-wash:  #DFEDE4;
+  --warn-wash:  #F5E9D2;
+  --crit-wash:  #F5DFDC;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px/1.5 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+::selection { background: var(--accent-wash); }
+
+:where(button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 9px; border: 3px solid transparent; background-clip: content-box; }
+
+.label {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.num { font-variant-numeric: tabular-nums; }
+
+.app {
+  display: grid;
+  grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--insp-w);
+  grid-template-rows: var(--head-h) minmax(0, 1fr) var(--foot-h);
+  grid-template-areas: "head head head" "rail bench insp" "foot foot foot";
+  height: 100vh;
+}
+
+/* ---------- header ---------- */
+.head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 8px; color: var(--accent); }
+.brand b {
+  font: 400 19px/1 var(--font-display);
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+.crumb { display: flex; align-items: center; gap: 7px; color: var(--ink-2); font-size: 12px; }
+.crumb .sep { color: var(--ink-3); }
+.crumb strong { font-weight: 600; color: var(--ink); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 22px; padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font: 500 11px/1 var(--font-mono);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.chip[data-tone="warn"] { background: var(--warn-wash); border-color: transparent; color: var(--warn); }
+.chip[data-tone="good"] { background: var(--good-wash); border-color: transparent; color: var(--good); }
+.chip[data-tone="crit"] { background: var(--crit-wash); border-color: transparent; color: var(--crit); }
+.chip[data-tone="brass"] { background: var(--brass-wash); border-color: transparent; color: var(--brass); }
+
+.spacer { flex: 1; }
+
+.faces { display: flex; }
+.face {
+  width: 25px; height: 25px; border-radius: 50%;
+  display: grid; place-items: center;
+  font: 600 10px/1 var(--font-ui);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  margin-left: -7px;
+}
+.face:first-child { margin-left: 0; }
+.face[data-hue="b"] { background: var(--brass); color: #fff; }
+.face[data-hue="n"] { background: var(--ink-2); color: var(--surface); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 11px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: var(--r);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.btn:hover { border-color: var(--ink-3); }
+.btn[data-kind="primary"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn[data-kind="primary"]:hover { filter: brightness(1.07); }
+.btn[data-kind="ghost"] { background: transparent; border-color: transparent; color: var(--ink-2); }
+.btn[data-kind="ghost"]:hover { background: var(--panel); color: var(--ink); }
+.btn[data-kind="ghost"][aria-pressed="true"] { background: var(--accent-wash); color: var(--accent); }
+
+/* ---------- left rail ---------- */
+.rail {
+  grid-area: rail;
+  display: flex; flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+.rail-search { padding: 10px; border-bottom: 1px solid var(--line-soft); }
+.rail-search input {
+  width: 100%; height: 28px;
+  padding: 0 9px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  font-size: 12px;
+}
+.rail-search input::placeholder { color: var(--ink-3); }
+.rail-list { flex: 1; min-height: 0; padding: 6px 0 14px; }
+.group { padding: 12px 12px 4px; display: flex; align-items: baseline; gap: 8px; }
+.group .count { font: 500 10px/1 var(--font-mono); color: var(--ink-3); }
+
+.item {
+  display: grid;
+  grid-template-columns: 8px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 0; background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink-2);
+  border-left: 2px solid transparent;
+}
+.item:hover { background: var(--panel); color: var(--ink); }
+.item[aria-selected="true"] {
+  background: var(--accent-wash);
+  border-left-color: var(--accent);
+  color: var(--ink);
+}
+.item .nm { font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .use { font: 500 10.5px/1 var(--font-mono); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+.dot[data-status="draft"] { background: var(--brass); }
+.dot[data-status="review"] { background: var(--warn); }
+.dot[data-status="deprecated"] { background: var(--crit); }
+
+.rail-foot {
+  border-top: 1px solid var(--line-soft);
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+/* ---------- bench ---------- */
+.bench { grid-area: bench; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.bench-bar {
+  display: flex; align-items: center; gap: 10px;
+  height: 40px; padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.bench-bar h1 {
+  margin: 0;
+  font: 400 16px/1 var(--font-display);
+  letter-spacing: -.005em;
+}
+.seg-ctl { display: flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg-ctl button {
+  border: 0; background: var(--surface); color: var(--ink-2);
+  padding: 0 10px; height: 24px; font-size: 11.5px; cursor: pointer;
+}
+.seg-ctl button + button { border-left: 1px solid var(--line); }
+.seg-ctl button[aria-pressed="true"] { background: var(--accent-wash); color: var(--accent); font-weight: 600; }
+
+.bench-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+.stage-wrap { flex: 1; min-height: 220px; padding: 26px; display: grid; place-items: center;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.stage {
+  display: grid; place-items: center;
+  min-width: 300px; min-height: 160px;
+  padding: 40px 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--stage-bg);
+  box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 12px 32px -18px rgba(0,0,0,.35);
+}
+
+.matrix-wrap { border-top: 1px solid var(--line); background: var(--surface); }
+.matrix-head { display: flex; align-items: center; gap: 10px; padding: 9px 14px 0; }
+.matrix-scroll { overflow-x: auto; padding: 10px 14px 16px; }
+.matrix { border-collapse: separate; border-spacing: 0; }
+.matrix th, .matrix td { padding: 0; }
+.matrix .axis {
+  font: 500 10px/1 var(--font-mono);
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 6px 10px;
+  white-space: nowrap;
+  text-align: left;
+}
+.matrix .axis.corner { color: var(--brass); }
+.cell {
+  display: grid; place-items: center;
+  min-width: 118px; padding: 12px 14px;
+  margin: 3px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--stage-bg);
+  cursor: pointer;
+  transition: border-color .1s ease, box-shadow .1s ease;
+}
+.cell:hover { border-color: var(--line); }
+.cell[data-live="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+/* ---------- inspector ---------- */
+.insp {
+  grid-area: insp;
+  min-height: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+}
+.sect { padding: 14px; border-bottom: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 11px; }
+.sect-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.field { display: grid; grid-template-columns: 82px minmax(0,1fr); align-items: center; gap: 10px; }
+.field > .label { text-transform: none; letter-spacing: .02em; font-size: 11px; color: var(--ink-2); }
+.pick { display: flex; flex-wrap: wrap; gap: 4px; }
+.pick button {
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink-2);
+  border-radius: 4px; padding: 3px 8px; font-size: 11.5px; cursor: pointer;
+}
+.pick button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.field input[type="text"] {
+  width: 100%; height: 26px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--paper); font-size: 12px;
+}
+.field input[type="range"] { width: 100%; accent-color: var(--accent); }
+.slider { display: grid; grid-template-columns: minmax(0,1fr) 46px; align-items: center; gap: 8px; }
+.slider output { font: 500 11px/1 var(--font-mono); color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
+
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat .v { font: 400 24px/1 var(--font-display); letter-spacing: -.01em; }
+.stat .v small { font: 500 11px/1 var(--font-mono); color: var(--ink-3); margin-left: 1px; }
+.stat .label { display: block; margin-top: 5px; }
+
+.spark { display: block; width: 100%; height: 34px; }
+
+.tokens { display: flex; flex-direction: column; gap: 5px; }
+.tok {
+  display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+  font: 500 11px/1.4 var(--font-mono);
+  padding: 4px 6px; border-radius: 4px; background: var(--paper);
+}
+.tok .k { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
+.tok .v { color: var(--brass); }
+
+.feed { display: flex; flex-direction: column; gap: 12px; }
+.note { display: grid; grid-template-columns: 24px minmax(0,1fr); gap: 9px; }
+.note .body { display: flex; flex-direction: column; gap: 3px; }
+.note .who { font-size: 12px; font-weight: 600; }
+.note .when { font: 500 10px/1 var(--font-mono); color: var(--ink-3); }
+.note p { margin: 0; font-size: 12px; color: var(--ink-2); }
+.note .face { margin: 0; width: 24px; height: 24px; border-width: 0; }
+
+.uses { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* ---------- status bar ---------- */
+.foot {
+  grid-area: foot;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  font: 500 10.5px/1 var(--font-mono);
+  color: var(--ink-3);
+}
+.foot kbd {
+  font: inherit; border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 3px; padding: 2px 4px; color: var(--ink-2);
+}
+
+/* ---------- toast ---------- */
+.toasts { position: fixed; right: 18px; bottom: 42px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+.toast {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 13px;
+  background: var(--ink); color: var(--paper);
+  border-radius: 6px;
+  font-size: 12px; font-weight: 500;
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.6);
+  animation: rise .22s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* ---------- preview surface: its own theme, independent of the app chrome ---------- */
+[data-surface="light"] {
+  --stage-bg:   #FFFFFF;
+  --c-ink:      #14181B;
+  --c-ink-2:    #5B6570;
+  --c-line:     #DEE3E7;
+  --c-muted:    #F2F4F6;
+  --c-accent:   #0F766A;
+  --c-on-acc:   #FFFFFF;
+  --c-danger:   #B3382F;
+  --c-shadow:   rgba(16,24,20,.14);
+}
+[data-surface="dark"] {
+  --stage-bg:   #161C1A;
+  --c-ink:      #E9EFEB;
+  --c-ink-2:    #9BA7A1;
+  --c-line:     #2E3733;
+  --c-muted:    #1E2523;
+  --c-accent:   #3FBFA8;
+  --c-on-acc:   #06201C;
+  --c-danger:   #E0685C;
+  --c-shadow:   rgba(0,0,0,.5);
+}
+
+.pv {
+  --s: 1;
+  font-family: var(--font-ui);
+  color: var(--c-ink);
+}
+.pv[data-size="sm"] { --s: .86; }
+.pv[data-size="lg"] { --s: 1.16; }
+
+.pv-btn {
+  display: inline-flex; align-items: center; gap: calc(6px * var(--s));
+  border: 1px solid transparent;
+  border-radius: calc(var(--c-radius) * 1px);
+  padding: calc(var(--c-pad-y) * var(--s) * 1px) calc(var(--c-pad-x) * var(--s) * 1px);
+  font-size: calc(var(--c-font) * var(--s) * 1px);
+  font-weight: var(--c-weight);
+  line-height: 1.15;
+  background: var(--c-accent); color: var(--c-on-acc);
+  cursor: pointer;
+}
+.pv-btn[data-tone="neutral"] { background: var(--c-muted); color: var(--c-ink); border-color: var(--c-line); }
+.pv-btn[data-tone="danger"]  { background: var(--c-danger); color: #fff; }
+.pv-btn[data-variant="outline"] { background: transparent; color: var(--c-accent); border-color: currentColor; }
+.pv-btn[data-variant="outline"][data-tone="neutral"] { color: var(--c-ink-2); }
+.pv-btn[data-variant="outline"][data-tone="danger"]  { color: var(--c-danger); }
+.pv-btn[data-state="disabled"] { opacity: .42; cursor: not-allowed; }
+.pv-btn[data-state="loading"] .spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(1turn); } }
+.pv-btn svg { width: calc(13px * var(--s)); height: calc(13px * var(--s)); }
+
+.pv-badge {
+  display: inline-flex; align-items: center; gap: calc(5px * var(--s));
+  border-radius: 999px;
+  padding: calc(var(--c-pad-y) * var(--s) * .45px) calc(var(--c-pad-x) * var(--s) * .62px);
+  font-size: calc(var(--c-font) * var(--s) * .86px);
+  font-weight: var(--c-weight);
+  background: var(--c-muted); color: var(--c-ink-2);
+}
+.pv-badge[data-tone="accent"] { background: color-mix(in srgb, var(--c-accent) 16%, transparent); color: var(--c-accent); }
+.pv-badge[data-tone="danger"] { background: color-mix(in srgb, var(--c-danger) 16%, transparent); color: var(--c-danger); }
+.pv-badge .led { width: calc(6px * var(--s)); height: calc(6px * var(--s)); border-radius: 50%; background: currentColor; }
+
+.pv-field { display: flex; flex-direction: column; gap: calc(5px * var(--s)); min-width: calc(180px * var(--s)); }
+.pv-field .lb { font-size: calc(var(--c-font) * var(--s) * .85px); font-weight: var(--c-weight); color: var(--c-ink-2); }
+.pv-field .bx {
+  border: 1px solid var(--c-line);
+  border-radius: calc(var(--c-radius) * 1px);
+  padding: calc(var(--c-pad-y) * var(--s) * 1px) calc(var(--c-pad-x) * var(--s) * .72px);
+  font-size: calc(var(--c-font) * var(--s) * 1px);
+  background: var(--stage-bg);
+  color: var(--c-ink);
+}
+.pv-field[data-state="focus"] .bx { border-color: var(--c-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent) 22%, transparent); }
+.pv-field[data-state="error"] .bx { border-color: var(--c-danger); }
+.pv-field[data-state="disabled"] { opacity: .45; }
+.pv-field .hint { font-size: calc(var(--c-font) * var(--s) * .8px); color: var(--c-ink-2); }
+.pv-field[data-state="error"] .hint { color: var(--c-danger); }
+
+.pv-switch { display: inline-flex; align-items: center; gap: calc(9px * var(--s)); font-size: calc(var(--c-font) * var(--s) * 1px); }
+.pv-switch .track {
+  width: calc(34px * var(--s)); height: calc(20px * var(--s));
+  border-radius: 999px; background: var(--c-line);
+  position: relative; transition: background .16s ease;
+}
+.pv-switch .knob {
+  position: absolute; top: calc(2px * var(--s)); left: calc(2px * var(--s));
+  width: calc(16px * var(--s)); height: calc(16px * var(--s));
+  border-radius: 50%; background: var(--stage-bg);
+  box-shadow: 0 1px 2px var(--c-shadow);
+  transition: transform .16s cubic-bezier(.2,.8,.3,1);
+}
+.pv-switch[data-on="true"] .track { background: var(--c-accent); }
+.pv-switch[data-on="true"] .knob { transform: translateX(calc(14px * var(--s))); }
+.pv-switch[data-state="disabled"] { opacity: .45; }
+
+.pv-seg { display: inline-flex; background: var(--c-muted); border-radius: calc(var(--c-radius) * 1px); padding: calc(3px * var(--s)); gap: calc(2px * var(--s)); }
+.pv-seg button {
+  border: 0; background: transparent; color: var(--c-ink-2);
+  border-radius: calc(var(--c-radius) * .8px);
+  padding: calc(var(--c-pad-y) * var(--s) * .62px) calc(var(--c-pad-x) * var(--s) * .72px);
+  font-size: calc(var(--c-font) * var(--s) * .94px);
+  font-weight: var(--c-weight); cursor: pointer;
+}
+.pv-seg button[aria-pressed="true"] { background: var(--stage-bg); color: var(--c-ink); box-shadow: 0 1px 2px var(--c-shadow); }
+
+.pv-toast {
+  display: flex; align-items: flex-start; gap: calc(10px * var(--s));
+  max-width: calc(320px * var(--s));
+  border: 1px solid var(--c-line); border-left: calc(3px * var(--s)) solid var(--c-accent);
+  border-radius: calc(var(--c-radius) * 1px);
+  padding: calc(var(--c-pad-y) * var(--s) * 1.1px) calc(var(--c-pad-x) * var(--s) * .9px);
+  background: var(--stage-bg);
+  box-shadow: 0 10px 28px -14px var(--c-shadow);
+  font-size: calc(var(--c-font) * var(--s) * 1px);
+}
+.pv-toast[data-tone="danger"] { border-left-color: var(--c-danger); }
+.pv-toast[data-tone="neutral"] { border-left-color: var(--c-ink-2); }
+.pv-toast .ttl { font-weight: 650; }
+.pv-toast .msg { color: var(--c-ink-2); font-size: calc(var(--c-font) * var(--s) * .92px); margin-top: calc(2px * var(--s)); }
+
+.pv-avatars { display: flex; }
+.pv-avatars .av {
+  width: calc(28px * var(--s)); height: calc(28px * var(--s));
+  border-radius: 50%; display: grid; place-items: center;
+  font-size: calc(var(--c-font) * var(--s) * .78px); font-weight: 650;
+  background: var(--c-accent); color: var(--c-on-acc);
+  border: calc(2px * var(--s)) solid var(--stage-bg);
+  margin-left: calc(-8px * var(--s));
+}
+.pv-avatars .av:first-child { margin-left: 0; }
+.pv-avatars .av[data-rest="true"] { background: var(--c-muted); color: var(--c-ink-2); }
+.pv-avatars[data-layout="row"] .av { margin-left: calc(4px * var(--s)); }
+
+.pv-meter { min-width: calc(200px * var(--s)); display: flex; flex-direction: column; gap: calc(6px * var(--s)); }
+.pv-meter .top { display: flex; justify-content: space-between; font-size: calc(var(--c-font) * var(--s) * .9px); }
+.pv-meter .top b { font-weight: var(--c-weight); }
+.pv-meter .top span { color: var(--c-ink-2); font-variant-numeric: tabular-nums; }
+.pv-meter .bar { height: calc(7px * var(--s)); border-radius: 999px; background: var(--c-muted); overflow: hidden; }
+.pv-meter .fill { height: 100%; background: var(--c-accent); border-radius: 999px; }
+.pv-meter[data-tone="danger"] .fill { background: var(--c-danger); }
+.pv-meter[data-tone="neutral"] .fill { background: var(--c-ink-2); }
+
+@media (max-width: 1180px) {
+  .app { grid-template-columns: var(--rail-w) minmax(0,1fr); grid-template-areas: "head head" "rail bench" "foot foot"; }
+  .insp { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="head">
+    <span class="brand">
+      <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+        <rect x="2.2" y="6.4" width="12.6" height="11.2" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M10.4 9.6h9.4v4.8h-9.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+      <b>Mortise</b>
+    </span>
+    <span class="crumb">
+      <span class="sep">/</span> Northbeam <span class="sep">/</span> <strong>Core library</strong>
+    </span>
+    <span class="chip" title="Working branch">main</span>
+    <span class="chip" id="dirty" data-tone="brass" hidden></span>
+    <span class="spacer"></span>
+    <span class="faces" title="Editing now: Priya, Tomas, Dana">
+      <span class="face">PK</span>
+      <span class="face" data-hue="b">TR</span>
+      <span class="face" data-hue="n">DM</span>
+    </span>
+    <button class="btn" data-kind="ghost" id="themeBtn" aria-pressed="false" title="Switch app theme">Theme</button>
+    <button class="btn" id="resetBtn">Reset changes</button>
+    <button class="btn" data-kind="primary" id="publishBtn">Publish</button>
+  </header>
+
+  <nav class="rail" aria-label="Components">
+    <div class="rail-search">
+      <input id="search" type="text" placeholder="Search components…" aria-label="Search components" autocomplete="off" />
+    </div>
+    <div class="rail-list scroll" id="railList"></div>
+    <div class="rail-foot">
+      <span class="label">Library health</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="chip" data-tone="good" id="hStable"></span>
+        <span class="chip" data-tone="warn" id="hDrift"></span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="bench" id="bench">
+    <div class="bench-bar">
+      <h1 id="benchTitle">Button</h1>
+      <span class="chip" id="benchStatus"></span>
+      <span class="chip" id="benchVer"></span>
+      <span class="spacer"></span>
+      <span class="label">Preview on</span>
+      <div class="seg-ctl" role="group" aria-label="Preview surface">
+        <button id="surfLight" aria-pressed="true">Light</button>
+        <button id="surfDark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <div class="bench-body">
+      <div class="stage-wrap" id="stageWrap" data-surface="light">
+        <div class="stage" id="stage"></div>
+      </div>
+
+      <div class="matrix-wrap">
+        <div class="matrix-head">
+          <span class="label">Variant matrix</span>
+          <span class="chip" id="matrixNote"></span>
+        </div>
+        <div class="matrix-scroll scroll" id="matrixScroll" data-surface="light">
+          <table class="matrix" id="matrix"></table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="insp scroll" id="insp" aria-label="Inspector"></aside>
+
+  <footer class="foot">
+    <span id="footPath">core / actions / button</span>
+    <span class="spacer"></span>
+    <span id="footSync">Synced 4 minutes ago</span>
+    <span>Press <kbd>/</kbd> to search · <kbd>↑</kbd><kbd>↓</kbd> to move</span>
+  </footer>
+</div>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+
+const ICON = {
+  plus:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M8 3.4v9.2M3.4 8h9.2"/></svg>',
+  next:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8h9M8.6 4.4 12.2 8l-3.6 3.6"/></svg>',
+  spin:  '<svg class="spin" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 1.8a6.2 6.2 0 1 1-6.2 6.2" stroke-linecap="round"/></svg>',
+  check: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.4 8.4 3 3 6.2-7"/></svg>'
+};
+
+const E = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const LIB = [
+  {
+    id: "button", name: "Button", group: "Actions", status: "stable", version: "2.4.0",
+    instances: 1284, adoption: 96, drift: 11, owner: "Priya Kulkarni", updated: "2 days ago",
+    products: ["Console", "Billing", "Mobile", "Docs", "Admin", "Onboarding"],
+    series: [58, 63, 67, 71, 74, 79, 83, 88, 91, 93, 95, 96],
+    tokens: { radius: 6, padY: 9, padX: 15, font: 13, weight: 600 },
+    tokenRefs: [["color.action.bg", "accent/700"], ["space.control.y", "9px"], ["radius.control", "6px"], ["type.label.md", "13/1.15"]],
+    props: [
+      { key: "tone", label: "Tone", type: "enum", values: ["accent", "neutral", "danger"] },
+      { key: "variant", label: "Variant", type: "enum", values: ["solid", "outline"] },
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "state", label: "State", type: "enum", values: ["default", "loading", "disabled"] },
+      { key: "icon", label: "Icon", type: "enum", values: ["none", "leading", "trailing"] },
+      { key: "label", label: "Label", type: "text", value: "Publish library" }
+    ],
+    axes: { x: { key: "tone", values: ["accent", "neutral", "danger"] }, y: { key: "size", values: ["sm", "md", "lg"] } },
+    notes: [
+      { who: "Tomas Reiner", hue: "b", when: "1d", text: "Loading state still swaps width when the label is short. Filed as a follow-up." },
+      { who: "Priya Kulkarni", hue: "", when: "2d", text: "Bumped the outline border to the control token so it survives the density change." }
+    ]
+  },
+  {
+    id: "segmented", name: "Segmented control", group: "Actions", status: "review", version: "1.1.0-rc.2",
+    instances: 212, adoption: 64, drift: 5, owner: "Dana Moreau", updated: "5 hours ago",
+    products: ["Console", "Admin", "Docs"],
+    series: [12, 18, 24, 29, 33, 38, 44, 48, 53, 57, 61, 64],
+    tokens: { radius: 7, padY: 9, padX: 15, font: 13, weight: 550 },
+    tokenRefs: [["color.surface.sunken", "neutral/100"], ["radius.control", "7px"], ["shadow.raised", "0 1 2"], ["type.label.md", "13/1.15"]],
+    props: [
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "items", label: "Items", type: "enum", values: ["2", "3", "4"] },
+      { key: "active", label: "Active", type: "enum", values: ["first", "middle", "last"] }
+    ],
+    axes: { x: { key: "items", values: ["2", "3", "4"] }, y: { key: "size", values: ["sm", "md", "lg"] } },
+    notes: [
+      { who: "Dana Moreau", hue: "n", when: "5h", text: "Four items overflow below 360px. Blocking release until we agree on the wrap rule." }
+    ]
+  },
+  {
+    id: "field", name: "Text field", group: "Inputs", status: "stable", version: "3.0.1",
+    instances: 947, adoption: 91, drift: 23, owner: "Priya Kulkarni", updated: "6 days ago",
+    products: ["Console", "Billing", "Onboarding", "Admin", "Mobile"],
+    series: [70, 72, 74, 76, 79, 81, 84, 86, 88, 89, 90, 91],
+    tokens: { radius: 6, padY: 9, padX: 15, font: 13, weight: 550 },
+    tokenRefs: [["color.border.input", "neutral/300"], ["focus.ring", "3px 22%"], ["radius.control", "6px"], ["space.control.y", "9px"]],
+    props: [
+      { key: "state", label: "State", type: "enum", values: ["default", "focus", "error", "disabled"] },
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "hint", label: "Helper", type: "enum", values: ["shown", "hidden"] },
+      { key: "label", label: "Label", type: "text", value: "Workspace name" }
+    ],
+    axes: { x: { key: "state", values: ["default", "focus", "error"] }, y: { key: "size", values: ["sm", "md", "lg"] } },
+    notes: [
+      { who: "Ilse Brandt", hue: "b", when: "3d", text: "23 instances still hardcode a 4px radius. Codemod is ready when you are." }
+    ]
+  },
+  {
+    id: "switch", name: "Switch", group: "Inputs", status: "stable", version: "1.6.0",
+    instances: 403, adoption: 88, drift: 2, owner: "Tomas Reiner", updated: "3 weeks ago",
+    products: ["Console", "Admin", "Mobile", "Billing"],
+    series: [61, 64, 68, 71, 74, 77, 80, 82, 84, 86, 87, 88],
+    tokens: { radius: 999, padY: 9, padX: 15, font: 13, weight: 550 },
+    tokenRefs: [["color.action.bg", "accent/700"], ["motion.toggle", "160ms"], ["shadow.knob", "0 1 2"]],
+    props: [
+      { key: "on", label: "On", type: "bool" },
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "state", label: "State", type: "enum", values: ["default", "disabled"] },
+      { key: "label", label: "Label", type: "text", value: "Require review" }
+    ],
+    axes: { x: { key: "on", values: [false, true] }, y: { key: "size", values: ["sm", "md", "lg"] } },
+    notes: [
+      { who: "Tomas Reiner", hue: "b", when: "3w", text: "Knob travel is derived from track width now, so it scales cleanly at every size." }
+    ]
+  },
+  {
+    id: "toast", name: "Toast", group: "Feedback", status: "draft", version: "0.9.0",
+    instances: 86, adoption: 31, drift: 0, owner: "Dana Moreau", updated: "yesterday",
+    products: ["Console", "Billing"],
+    series: [0, 0, 2, 5, 8, 11, 15, 19, 23, 26, 29, 31],
+    tokens: { radius: 8, padY: 11, padX: 16, font: 13, weight: 600 },
+    tokenRefs: [["color.border.default", "neutral/200"], ["shadow.overlay", "0 10 28"], ["radius.surface", "8px"]],
+    props: [
+      { key: "tone", label: "Tone", type: "enum", values: ["accent", "neutral", "danger"] },
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "action", label: "Action", type: "bool" },
+      { key: "label", label: "Title", type: "text", value: "Library published" }
+    ],
+    axes: { x: { key: "tone", values: ["accent", "neutral", "danger"] }, y: { key: "action", values: [false, true] } },
+    notes: [
+      { who: "Dana Moreau", hue: "n", when: "1d", text: "Draft until we settle stacking order with the banner. Do not ship to Mobile yet." }
+    ]
+  },
+  {
+    id: "badge", name: "Badge", group: "Feedback", status: "stable", version: "2.0.0",
+    instances: 668, adoption: 84, drift: 7, owner: "Ilse Brandt", updated: "9 days ago",
+    products: ["Console", "Billing", "Docs", "Admin"],
+    series: [44, 49, 54, 59, 64, 69, 73, 76, 79, 81, 83, 84],
+    tokens: { radius: 999, padY: 8, padX: 14, font: 13, weight: 600 },
+    tokenRefs: [["color.surface.sunken", "neutral/100"], ["type.label.sm", "11/1.2"], ["radius.pill", "999px"]],
+    props: [
+      { key: "tone", label: "Tone", type: "enum", values: ["neutral", "accent", "danger"] },
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "led", label: "Status dot", type: "bool" },
+      { key: "label", label: "Label", type: "text", value: "In review" }
+    ],
+    axes: { x: { key: "tone", values: ["neutral", "accent", "danger"] }, y: { key: "led", values: [false, true] } },
+    notes: [
+      { who: "Ilse Brandt", hue: "b", when: "9d", text: "Dot variant replaces the four one-off status pills Billing was carrying." }
+    ]
+  },
+  {
+    id: "avatars", name: "Avatar stack", group: "Data display", status: "stable", version: "1.3.2",
+    instances: 158, adoption: 72, drift: 1, owner: "Tomas Reiner", updated: "12 days ago",
+    products: ["Console", "Docs", "Admin"],
+    series: [38, 42, 47, 51, 55, 59, 62, 65, 67, 69, 71, 72],
+    tokens: { radius: 999, padY: 9, padX: 15, font: 13, weight: 650 },
+    tokenRefs: [["color.action.bg", "accent/700"], ["border.cutout", "2px surface"], ["radius.circle", "50%"]],
+    props: [
+      { key: "count", label: "People", type: "enum", values: ["2", "3", "5", "8"] },
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "layout", label: "Layout", type: "enum", values: ["overlap", "row"] }
+    ],
+    axes: { x: { key: "count", values: ["2", "3", "5", "8"] }, y: { key: "layout", values: ["overlap", "row"] } },
+    notes: [
+      { who: "Priya Kulkarni", hue: "", when: "12d", text: "Overflow chip caps at +99. Anything larger reads as noise in the header." }
+    ]
+  },
+  {
+    id: "meter", name: "Usage meter", group: "Data display", status: "deprecated", version: "1.0.4",
+    instances: 41, adoption: 18, drift: 14, owner: "Ilse Brandt", updated: "2 months ago",
+    products: ["Billing"],
+    series: [52, 49, 45, 41, 38, 34, 31, 28, 25, 22, 20, 18],
+    tokens: { radius: 999, padY: 9, padX: 15, font: 13, weight: 600 },
+    tokenRefs: [["color.action.bg", "accent/700"], ["radius.pill", "999px"], ["type.label.sm", "11/1.2"]],
+    props: [
+      { key: "tone", label: "Tone", type: "enum", values: ["accent", "neutral", "danger"] },
+      { key: "size", label: "Size", type: "enum", values: ["sm", "md", "lg"] },
+      { key: "pct", label: "Filled", type: "enum", values: ["18", "56", "92"] },
+      { key: "label", label: "Label", type: "text", value: "Seats used" }
+    ],
+    axes: { x: { key: "tone", values: ["accent", "neutral", "danger"] }, y: { key: "pct", values: ["18", "56", "92"] } },
+    notes: [
+      { who: "Ilse Brandt", hue: "b", when: "2mo", text: "Deprecated in favour of Progress. 41 instances left, all in Billing." }
+    ]
+  }
+];
+
+const GROUPS = ["Actions", "Inputs", "Feedback", "Data display"];
+const STATUS_TONE = { stable: "good", review: "warn", draft: "brass", deprecated: "crit" };
+const STATUS_TEXT = { stable: "Stable", review: "In review", draft: "Draft", deprecated: "Deprecated" };
+
+const SEG_LABELS = ["Design", "Code", "Usage", "History"];
+const PEOPLE = ["PK", "TR", "DM", "IB", "LN", "SA", "MO", "RV"];
+
+const RENDER = {
+  button(p) {
+    const loading = p.state === "loading";
+    const glyph = loading ? ICON.spin : p.icon === "leading" ? ICON.plus : ICON.next;
+    const lead = loading || p.icon === "leading";
+    const trail = !loading && p.icon === "trailing";
+    const show = loading || p.icon !== "none";
+    return `<button class="pv pv-btn" type="button" data-size="${p.size}" data-tone="${p.tone}" data-variant="${p.variant}" data-state="${p.state}"${p.state === "disabled" ? " disabled" : ""}>` +
+      `${show && lead ? glyph : ""}<span>${E(p.label)}</span>${show && trail ? glyph : ""}</button>`;
+  },
+  segmented(p) {
+    const n = Number(p.items);
+    const idx = p.active === "first" ? 0 : p.active === "last" ? n - 1 : Math.floor((n - 1) / 2);
+    const items = SEG_LABELS.slice(0, n).map((l, i) =>
+      `<button type="button" aria-pressed="${i === idx}">${l}</button>`).join("");
+    return `<div class="pv pv-seg" data-size="${p.size}" role="group">${items}</div>`;
+  },
+  field(p) {
+    const hint = p.hint === "hidden" ? "" :
+      `<span class="hint">${p.state === "error" ? "Names must be lowercase and unique." : "Lowercase letters, numbers and dashes."}</span>`;
+    return `<div class="pv pv-field" data-size="${p.size}" data-state="${p.state}">` +
+      `<span class="lb">${E(p.label)}</span><div class="bx">northbeam-production</div>${hint}</div>`;
+  },
+  switch(p) {
+    return `<div class="pv pv-switch" data-size="${p.size}" data-state="${p.state}" data-on="${!!p.on}">` +
+      `<span class="track"><span class="knob"></span></span><span>${E(p.label)}</span></div>`;
+  },
+  toast(p) {
+    const action = p.action ? `<button class="pv-btn" type="button" data-tone="neutral" data-variant="outline" style="--s:.82">Undo</button>` : "";
+    return `<div class="pv pv-toast" data-size="${p.size}" data-tone="${p.tone}">` +
+      `<div style="flex:1"><div class="ttl">${E(p.label)}</div><div class="msg">14 components and 3 token sets are live for every product.</div></div>${action}</div>`;
+  },
+  badge(p) {
+    return `<span class="pv pv-badge" data-size="${p.size}" data-tone="${p.tone}">` +
+      `${p.led ? '<span class="led"></span>' : ""}${E(p.label)}</span>`;
+  },
+  avatars(p) {
+    const n = Number(p.count);
+    const shown = Math.min(n, 4);
+    const faces = PEOPLE.slice(0, shown).map((i) => `<span class="av">${i}</span>`).join("");
+    const rest = n > shown ? `<span class="av" data-rest="true">+${n - shown}</span>` : "";
+    return `<div class="pv pv-avatars" data-size="${p.size}" data-layout="${p.layout}">${faces}${rest}</div>`;
+  },
+  meter(p) {
+    const pct = Number(p.pct);
+    return `<div class="pv pv-meter" data-size="${p.size}" data-tone="${p.tone}">` +
+      `<div class="top"><b>${E(p.label)}</b><span>${pct}%</span></div>` +
+      `<div class="bar"><div class="fill" style="width:${pct}%"></div></div></div>`;
+  }
+};
+
+const BOOL_DEFAULT = { switch: { on: true }, badge: { led: true }, toast: { action: true } };
+
+function defaults(comp) {
+  const out = {};
+  for (const prop of comp.props) {
+    if (prop.type === "enum") out[prop.key] = prop.values[0];
+    else if (prop.type === "bool") out[prop.key] = !!(BOOL_DEFAULT[comp.id] || {})[prop.key];
+    else out[prop.key] = prop.value;
+  }
+  if ("size" in out) out.size = "md";
+  return out;
+}
+
+const S = {
+  sel: "button",
+  surface: "light",
+  filter: "",
+  edits: 0,
+  props: {},
+  tokens: {}
+};
+for (const c of LIB) { S.props[c.id] = defaults(c); S.tokens[c.id] = { ...c.tokens }; }
+
+const $ = (id) => document.getElementById(id);
+const current = () => LIB.find((c) => c.id === S.sel);
+
+function toast(msg) {
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = ICON.check.replace("<svg", '<svg width="14" height="14" style="flex:none"') + `<span>${E(msg)}</span>`;
+  $("toasts").append(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+function markEdited() {
+  S.edits += 1;
+  const chip = $("dirty");
+  chip.hidden = false;
+  chip.textContent = S.edits === 1 ? "1 unpublished change" : S.edits + " unpublished changes";
+}
+
+function renderRail() {
+  const q = S.filter.trim().toLowerCase();
+  const rows = [];
+  for (const g of GROUPS) {
+    const items = LIB.filter((c) => c.group === g && (!q || c.name.toLowerCase().includes(q)));
+    if (!items.length) continue;
+    rows.push(`<div class="group"><span class="label">${g}</span><span class="count num">${items.length}</span></div>`);
+    for (const c of items) {
+      rows.push(
+        `<button class="item" role="option" data-id="${c.id}" aria-selected="${c.id === S.sel}" title="${STATUS_TEXT[c.status]} · ${c.instances} instances">` +
+        `<span class="dot" data-status="${c.status}"></span><span class="nm">${c.name}</span><span class="use num">${c.instances}</span></button>`
+      );
+    }
+  }
+  if (!rows.length) rows.push(`<div class="group"><span class="label">No match for “${E(S.filter)}”</span></div>`);
+  $("railList").innerHTML = rows.join("");
+  for (const b of $("railList").querySelectorAll(".item")) {
+    b.addEventListener("click", () => select(b.dataset.id));
+  }
+}
+
+function renderStage() {
+  const c = current();
+  const t = S.tokens[c.id];
+  $("bench").style.cssText =
+    `--c-radius:${t.radius};--c-pad-y:${t.padY};--c-pad-x:${t.padX};--c-font:${t.font};--c-weight:${t.weight}`;
+  $("benchTitle").textContent = c.name;
+  const st = $("benchStatus");
+  st.textContent = STATUS_TEXT[c.status];
+  st.dataset.tone = STATUS_TONE[c.status];
+  $("benchVer").textContent = "v" + c.version;
+  $("stage").innerHTML = RENDER[c.id](S.props[c.id]);
+  $("footPath").textContent = `core / ${c.group.toLowerCase().replace(" ", "-")} / ${c.id}`;
+}
+
+function renderMatrix() {
+  const c = current();
+  const { x, y } = c.axes;
+  const live = S.props[c.id];
+  const head = ["<thead><tr><th class=\"axis corner\">" + y.key + " ↓ / " + x.key + " →</th>"];
+  for (const xv of x.values) head.push(`<th class="axis">${String(xv)}</th>`);
+  head.push("</tr></thead>");
+  const body = ["<tbody>"];
+  for (const yv of y.values) {
+    body.push(`<tr><th class="axis">${String(yv)}</th>`);
+    for (const xv of x.values) {
+      const p = { ...live, [x.key]: xv, [y.key]: yv };
+      const isLive = String(live[x.key]) === String(xv) && String(live[y.key]) === String(yv);
+      body.push(`<td><div class="cell" role="button" tabindex="0" data-live="${isLive}" data-x="${String(xv)}" data-y="${String(yv)}" title="Apply ${x.key}=${String(xv)}, ${y.key}=${String(yv)}">${RENDER[c.id](p)}</div></td>`);
+    }
+    body.push("</tr>");
+  }
+  body.push("</tbody>");
+  $("matrix").innerHTML = head.join("") + body.join("");
+  $("matrixNote").textContent = `${x.values.length * y.values.length} combinations · ${x.key} × ${y.key}`;
+
+  const cast = (axis, raw) => (typeof axis.values[0] === "boolean" ? raw === "true" : raw);
+  for (const cell of $("matrix").querySelectorAll(".cell")) {
+    const apply = () => {
+      S.props[c.id][x.key] = cast(x, cell.dataset.x);
+      S.props[c.id][y.key] = cast(y, cell.dataset.y);
+      renderStage(); renderMatrix(); renderInspector();
+    };
+    cell.addEventListener("click", apply);
+    cell.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); apply(); } });
+  }
+}
+
+function spark(series) {
+  const w = 280, h = 34, pad = 2;
+  const min = Math.min(...series), max = Math.max(...series);
+  const span = max - min || 1;
+  const pt = (v, i) => [
+    (i / (series.length - 1)) * w,
+    h - pad - ((v - min) / span) * (h - pad * 2)
+  ];
+  const pts = series.map(pt);
+  const line = pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(" ");
+  const [lx, ly] = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">` +
+    `<polygon points="0,${h} ${line} ${w},${h}" fill="var(--accent)" opacity=".13"></polygon>` +
+    `<polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>` +
+    `<rect x="${(lx - 2.5).toFixed(1)}" y="${(ly - 2.5).toFixed(1)}" width="5" height="5" fill="var(--accent)"></rect></svg>`;
+}
+
+const SLIDERS = [
+  { key: "padY", label: "Padding Y", min: 4, max: 18, step: 1, unit: "px" },
+  { key: "padX", label: "Padding X", min: 6, max: 28, step: 1, unit: "px" },
+  { key: "font", label: "Label size", min: 11, max: 17, step: 1, unit: "px" },
+  { key: "weight", label: "Weight", min: 400, max: 800, step: 50, unit: "" }
+];
+
+function renderInspector() {
+  const c = current();
+  const p = S.props[c.id];
+  const t = S.tokens[c.id];
+
+  const controls = c.props.map((prop) => {
+    if (prop.type === "text") {
+      return `<label class="field"><span class="label">${prop.label}</span>` +
+        `<input type="text" data-prop="${prop.key}" value="${E(p[prop.key])}" /></label>`;
+    }
+    const values = prop.type === "bool" ? [false, true] : prop.values;
+    const btns = values.map((v) => {
+      const txt = prop.type === "bool" ? (v ? "On" : "Off") : v;
+      return `<button type="button" data-prop="${prop.key}" data-val="${String(v)}" data-bool="${prop.type === "bool"}" aria-pressed="${String(p[prop.key]) === String(v)}">${txt}</button>`;
+    }).join("");
+    return `<div class="field"><span class="label">${prop.label}</span><div class="pick">${btns}</div></div>`;
+  }).join("");
+
+  const radiusRow = t.radius >= 100
+    ? `<div class="field"><span class="label">Corner</span><div class="pick"><button type="button" aria-pressed="true" disabled>Pill — fixed</button></div></div>`
+    : `<label class="field"><span class="label">Corner</span><span class="slider">` +
+      `<input type="range" data-token="radius" min="0" max="16" step="1" value="${t.radius}" /><output class="num">${t.radius}px</output></span></label>`;
+
+  const sliders = SLIDERS.map((s) =>
+    `<label class="field"><span class="label">${s.label}</span><span class="slider">` +
+    `<input type="range" data-token="${s.key}" min="${s.min}" max="${s.max}" step="${s.step}" value="${t[s.key]}" />` +
+    `<output class="num">${t[s.key]}${s.unit}</output></span></label>`).join("");
+
+  const refs = c.tokenRefs.map(([k, v]) => `<div class="tok"><span class="k">${k}</span><span class="v">${v}</span></div>`).join("");
+  const products = c.products.map((n) => `<span class="chip">${n}</span>`).join("");
+  const notes = c.notes.map((n) =>
+    `<div class="note"><span class="face"${n.hue ? ` data-hue="${n.hue}"` : ""}>${n.who.split(" ").map((w) => w[0]).join("")}</span>` +
+    `<div class="body"><span class="who">${n.who} <span class="when">${n.when}</span></span><p>${E(n.text)}</p></div></div>`).join("");
+
+  const driftChip = c.drift
+    ? `<span class="chip" data-tone="warn">${c.drift} off-token instances</span>`
+    : `<span class="chip" data-tone="good">No token drift</span>`;
+
+  $("insp").innerHTML =
+    `<div class="sect">
+      <div class="sect-head"><span class="label">Owner</span><span class="chip">${c.owner}</span></div>
+      <div class="stat-row">
+        <div class="stat"><div class="v num">${c.adoption}<small>%</small></div><span class="label">Adoption</span></div>
+        <div class="stat"><div class="v num">${c.instances}</div><span class="label">Instances</span></div>
+        <div class="stat"><div class="v num">${c.products.length}</div><span class="label">Products</span></div>
+      </div>
+      ${spark(c.series)}
+      <div class="sect-head"><span class="label">12 months</span>${driftChip}</div>
+      <div class="uses">${products}</div>
+    </div>
+
+    <div class="sect">
+      <span class="label">Properties</span>
+      ${controls}
+    </div>
+
+    <div class="sect">
+      <div class="sect-head"><span class="label">Token overrides</span><span class="chip">${c.id}</span></div>
+      ${radiusRow}
+      ${sliders}
+    </div>
+
+    <div class="sect">
+      <span class="label">Resolved tokens</span>
+      <div class="tokens">${refs}</div>
+    </div>
+
+    <div class="sect">
+      <span class="label">Activity</span>
+      <div class="feed">${notes}</div>
+    </div>`;
+
+  for (const b of $("insp").querySelectorAll(".pick button[data-prop]")) {
+    b.addEventListener("click", () => {
+      S.props[c.id][b.dataset.prop] = b.dataset.bool === "true" ? b.dataset.val === "true" : b.dataset.val;
+      markEdited(); renderStage(); renderMatrix(); renderInspector();
+    });
+  }
+  for (const i of $("insp").querySelectorAll('input[type="text"][data-prop]')) {
+    i.addEventListener("input", () => {
+      S.props[c.id][i.dataset.prop] = i.value;
+      markEdited(); renderStage(); renderMatrix();
+    });
+  }
+  for (const r of $("insp").querySelectorAll("input[data-token]")) {
+    r.addEventListener("input", () => {
+      const key = r.dataset.token;
+      S.tokens[c.id][key] = Number(r.value);
+      const spec = SLIDERS.find((s) => s.key === key);
+      r.parentElement.querySelector("output").textContent = r.value + (spec ? spec.unit : "px");
+      markEdited(); renderStage(); renderMatrix();
+    });
+  }
+}
+
+function renderHealth() {
+  const stable = LIB.filter((c) => c.status === "stable").length;
+  const drift = LIB.reduce((n, c) => n + c.drift, 0);
+  $("hStable").textContent = `${stable} of ${LIB.length} stable`;
+  $("hDrift").textContent = `${drift} off-token instances`;
+}
+
+function select(id) {
+  S.sel = id;
+  renderRail(); renderStage(); renderMatrix(); renderInspector();
+}
+
+function setSurface(mode) {
+  S.surface = mode;
+  $("stageWrap").dataset.surface = mode;
+  $("matrixScroll").dataset.surface = mode;
+  $("surfLight").setAttribute("aria-pressed", String(mode === "light"));
+  $("surfDark").setAttribute("aria-pressed", String(mode === "dark"));
+}
+
+$("surfLight").addEventListener("click", () => setSurface("light"));
+$("surfDark").addEventListener("click", () => setSurface("dark"));
+
+$("search").addEventListener("input", (e) => { S.filter = e.target.value; renderRail(); });
+
+$("themeBtn").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme === "dark" ||
+    (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+  $("themeBtn").setAttribute("aria-pressed", String(!dark));
+});
+
+$("publishBtn").addEventListener("click", () => {
+  if (!S.edits) { toast("Nothing to publish — library matches main"); return; }
+  const n = S.edits;
+  S.edits = 0;
+  $("dirty").hidden = true;
+  $("footSync").textContent = "Synced just now";
+  toast(`Published ${n} change${n === 1 ? "" : "s"} to Core library`);
+});
+
+$("resetBtn").addEventListener("click", () => {
+  const c = current();
+  S.props[c.id] = defaults(c);
+  S.tokens[c.id] = { ...c.tokens };
+  renderStage(); renderMatrix(); renderInspector();
+  toast(`${c.name} reset to v${c.version}`);
+});
+
+document.addEventListener("keydown", (e) => {
+  const typing = e.target.tagName === "INPUT";
+  if (e.key === "/" && !typing) { e.preventDefault(); $("search").focus(); return; }
+  if (typing && e.key === "Escape") { e.target.blur(); return; }
+  if (typing || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
+  e.preventDefault();
+  const ids = [...$("railList").querySelectorAll(".item")].map((b) => b.dataset.id);
+  const at = ids.indexOf(S.sel);
+  const next = ids[(at + (e.key === "ArrowDown" ? 1 : ids.length - 1)) % ids.length];
+  if (next) select(next);
+});
+
+renderHealth();
+select("button");
+setSurface("light");
+</script>
+</body>
+</html>
